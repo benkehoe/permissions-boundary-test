@@ -108,7 +108,7 @@ except aws_error_utils.errors.ValidationError:
         OnFailure="DELETE",
     )
     print("Create in progress")
-    cloudformation.get_waiter("stack_create_complete").wait(StackName=args.stack_name)
+    cloudformation.get_waiter("stack_create_complete").wait(StackName=args.stack_name, WaiterConfig={"Delay": 5})
     print("Create complete")
 else:
     print("Resetting stack")
@@ -123,7 +123,7 @@ else:
             Capabilities=["CAPABILITY_IAM"],
         )
         print("Update in progress")
-        cloudformation.get_waiter("stack_update_complete").wait(StackName=args.stack_name)
+        cloudformation.get_waiter("stack_update_complete").wait(StackName=args.stack_name, WaiterConfig={"Delay": 5})
         print("Update complete")
     except aws_error_utils.errors.ValidationError:
         print("Stack did not need update")
@@ -131,12 +131,12 @@ else:
 response = cloudformation.describe_stacks(StackName=args.stack_name)
 _, _, outputs = get_stack_info(response)
 
-assumed_role_session = aws_assume_role_lib.assume_role(session, outputs["RoleArn"])
+test_session = aws_assume_role_lib.assume_role(session, outputs["RoleArn"])
 
-response = assumed_role_session.client("sts").get_caller_identity()
-assumed_role_session_arn = response["Arn"]
+response = test_session.client("sts").get_caller_identity()
+test_session_arn = response["Arn"]
 
-bucket = assumed_role_session.resource("s3").Bucket(outputs["BucketName"])
+bucket = test_session.resource("s3").Bucket(outputs["BucketName"])
 
 print("\n\nTesting role as resource policy principal")
 results = run_test(bucket, KEYS, timestamp_bytes)
@@ -144,18 +144,18 @@ results = run_test(bucket, KEYS, timestamp_bytes)
 print_results(results)
 print("\n")
 
-print(f"Updating stack with assumed role session {assumed_role_session_arn}")
+print(f"Updating stack with assumed role session {test_session_arn}")
 cloudformation.update_stack(
     StackName=args.stack_name,
     UsePreviousTemplate=True,
     Parameters=[{
         "ParameterKey": "AssumedRoleSessionArn",
-        "ParameterValue": assumed_role_session_arn
+        "ParameterValue": test_session_arn
     }],
     Capabilities=["CAPABILITY_IAM"],
 )
 print("Update in progress")
-cloudformation.get_waiter("stack_update_complete").wait(StackName=args.stack_name)
+cloudformation.get_waiter("stack_update_complete").wait(StackName=args.stack_name, WaiterConfig={"Delay": 5})
 print("Update complete")
 
 print("\n\nTesting assumed role session as resource policy principal")
@@ -163,5 +163,18 @@ results = run_test(bucket, KEYS, timestamp_bytes)
 
 print_results(results)
 
-print("\n\nDeleting objects from bucket")
+print("\n\nResetting stack")
+response = cloudformation.update_stack(
+    StackName=args.stack_name,
+    TemplateBody=template,
+    Parameters=[{
+        "ParameterKey": "AssumedRoleSessionArn",
+        "ParameterValue": EMPTY_PARAM,
+    }],
+    Capabilities=["CAPABILITY_IAM"],
+)
+print("Deleting objects from bucket")
 delete_objects(session, outputs["BucketName"])
+print("Waiting for stack update to finish")
+cloudformation.get_waiter("stack_update_complete").wait(StackName=args.stack_name, WaiterConfig={"Delay": 5})
+print("Done")
