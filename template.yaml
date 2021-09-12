@@ -1,0 +1,77 @@
+#          B P R
+# BA-PA-RA A A A
+# BA-PA    A A -
+# BA       A - -
+# PA-RA    - A A
+# PA       - A -
+# RA       - - A
+# BA-RA    A - A
+
+Outputs:
+  RoleArn:
+    Value: !GetAtt Role.Arn
+  BucketName:
+    Value: !Ref Bucket
+
+Resources:
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Effect: Allow
+          Action: sts:AssumeRole
+          Principal:
+            "AWS": !Ref AWS::AccountId
+      PermissionsBoundary: !Ref Policy
+      Policies:
+        - PolicyName: Policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+            - Effect: Allow
+              Action: s3:PutObject
+              Resource:
+              - !Sub "arn:aws:s3:::${Bucket}/BA-PA-RA"
+              - !Sub "arn:aws:s3:::${Bucket}/BA-PA"
+              - !Sub "arn:aws:s3:::${Bucket}/PA-RA"
+              - !Sub "arn:aws:s3:::${Bucket}/PA"
+
+  Policy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Action: s3:PutObject
+          Resource:
+          - !Sub "arn:aws:s3:::${Bucket}/BA-PA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/BA-PA"
+          - !Sub "arn:aws:s3:::${Bucket}/BA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/BA"
+
+  Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref Bucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Action: s3:PutObject
+          Principal:
+            AWS: !GetAtt Role.Arn
+          Resource:
+          - !Sub "arn:aws:s3:::${Bucket}/BA-PA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/BA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/PA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/RA"
