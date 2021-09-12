@@ -47,6 +47,13 @@ Resources:
               - !Sub "arn:aws:s3:::${Bucket}/BA-PA"
               - !Sub "arn:aws:s3:::${Bucket}/PA-RA"
               - !Sub "arn:aws:s3:::${Bucket}/PA"
+            - Effect: Allow
+              Action: s3:PutObject
+              Resource:
+              - !Sub "arn:aws:s3:::${Bucket}/C-BA-PA-RA"
+              - !Sub "arn:aws:s3:::${Bucket}/C-BA-PA"
+              - !Sub "arn:aws:s3:::${Bucket}/C-PA-RA"
+              - !Sub "arn:aws:s3:::${Bucket}/C-PA"
 
   Policy:
     Type: AWS::IAM::ManagedPolicy
@@ -61,6 +68,13 @@ Resources:
           - !Sub "arn:aws:s3:::${Bucket}/BA-PA"
           - !Sub "arn:aws:s3:::${Bucket}/BA-RA"
           - !Sub "arn:aws:s3:::${Bucket}/BA"
+        - Effect: Allow
+          Action: s3:PutObject
+          Resource:
+          - !Sub "arn:aws:s3:::${Bucket}/C-BA-PA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/C-BA-PA"
+          - !Sub "arn:aws:s3:::${Bucket}/C-BA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/C-BA"
 
   Bucket:
     Type: AWS::S3::Bucket
@@ -76,7 +90,8 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-        - Effect: Allow
+        - Sid: BaseTest
+          Effect: Allow
           Action: s3:PutObject
           Principal:
             AWS:
@@ -89,3 +104,21 @@ Resources:
           - !Sub "arn:aws:s3:::${Bucket}/BA-RA"
           - !Sub "arn:aws:s3:::${Bucket}/PA-RA"
           - !Sub "arn:aws:s3:::${Bucket}/RA"
+        - Sid: ConditionTest
+          Effect: Allow
+          Action: s3:PutObject
+          Principal:
+            AWS: !Sub "${AWS::AccountId}"
+          Resource:
+          - !Sub "arn:aws:s3:::${Bucket}/C-BA-PA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/C-BA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/C-PA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/C-RA"
+          Condition:
+            StringEquals:
+              "aws:PrincipalArn":
+                - !If
+                  - SessionNameNotSet
+                  - !GetAtt Role.Arn
+                  - !Ref AssumedRoleSessionArn
+
