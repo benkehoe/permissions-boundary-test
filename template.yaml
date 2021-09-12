@@ -7,6 +7,16 @@
 # RA       - - A
 # BA-RA    A - A
 
+Parameters:
+  AssumedRoleSessionArn:
+    Type: String
+    Default: "###NONE###"
+
+Conditions:
+  SessionNameNotSet: !Equals
+  - !Ref AssumedRoleSessionArn
+  - "###NONE###"
+
 Outputs:
   RoleArn:
     Value: !GetAtt Role.Arn
@@ -69,7 +79,11 @@ Resources:
         - Effect: Allow
           Action: s3:PutObject
           Principal:
-            AWS: !GetAtt Role.Arn
+            AWS:
+            - !If
+              - SessionNameNotSet
+              - !GetAtt Role.Arn
+              - !Ref AssumedRoleSessionArn
           Resource:
           - !Sub "arn:aws:s3:::${Bucket}/BA-PA-RA"
           - !Sub "arn:aws:s3:::${Bucket}/BA-RA"

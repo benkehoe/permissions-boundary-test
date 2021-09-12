@@ -3,35 +3,52 @@ The flowchart from the AWS IAM [policy evaluation documentation page](https://do
 
 The flowchart indicates that an Allow in a resource policy causes a final decision of Allow, before permissions boundaries have a chance to cause an implicit Deny.
 This would mean a resource policy could unilaterally grant access to a principal, circumventing its permissions boundary.
-However, a test of this shows this to be incorrect.
+However, this is only partially correct.
+
+Resource policies cannot unilaterally grant access to an IAM *role* but *can* unilaterally grant access to *particular role sessions*, that is, the thing that is created by calling `AssumeRole`. This is mentioned in the docs [here](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html#access_policies_boundaries-eval-logic).
+
+This is true for assumed role sessions created with `AssumeRole`, where the principal in the resource policy is the assumed role session ARN, which is retrievable through the `GetCallerIdentity` API, which does not require permissions.
+
+According to the documentation, it's also true for federated identity providers as principals, which apparently means *all* assumed role sessions (through either `AssumeRoleWithSAML` or `AssumeRoleWithWebIdentity`) for that identity provider would be unilaterally granted access by the resource policy.
+
+The documentation is unclear on IAM users. In adjacent paragraphs [here](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html#access_policies_boundaries-eval-logic), the documentation states:
+
+> Within an account, an implicit deny in a permissions boundary *does not* limit the permissions granted to an IAM user by a resource-based policy.
+
+> Within an account, an implicit deny in a permissions boundary *does* limit the permissions granted to the ARN of the underlying [...] IAM user by the resource-based policy.
+
+It's possible the latter statement about an "IAM user" is actually about a *federated* user in an IAM role?
+
+## Verification
 
 For an IAM role with a permissions boundary, role policy, and resource policy, none with any `Deny`s, the possible combinations of `Allow`s in the policy have the following results:
 
+### Role as resource policy principal
 Permissions Boundary | Role Policy | Resource Policy | Result
 --- | --- | --- | ---
 \- | - | Allow | **Deny**
+\- | Allow | Allow | **Deny**
 Allow | Allow | - | Allow
 Allow | - | Allow | Allow
 Allow | Allow | Allow | Allow
 Allow | - | - | Deny
 \- | Allow | - | Deny
-\- | Allow | Allow | Deny
+
+### Assumed role session as resource policy principal
+Permissions Boundary | Role Policy | Resource Policy | Result
+--- | --- | --- | ---
+\- | - | Allow | **Allow**
+\- | Allow | Allow | **Allow**
+Allow | Allow | - | Allow
+Allow | - | Allow | Allow
+Allow | Allow | Allow | Allow
+Allow | - | - | Deny
+\- | Allow | - | Deny
 
 The code in this repo verifies this.
 
-```
-> pipenv install
-> ./deploy.sh
-> ./test.sh
-RA       Deny
-BA-PA    Allow
-BA-RA    Allow
-BA-PA-RA Allow
-BA       Deny
-PA       Deny
-PA-RA    Deny
-```
-
-`deploy.sh` will set up a stack named `permissions-boundary-test` with a role, and managed policy (for the role's permissions boundary), and an S3 bucket.
-`test.py` will run tests against this stack.
+Run `pipenv install` and then `test.py`.
 Use `--profile` on `test.py` to make it use a config profile.
+
+This will create a stack named `permissions-boundary-test` with a role, and managed policy (for the role's permissions boundary), and an S3 bucket.
+It will run the tests against the stack using the role as the principal in the bucket policy, and then create an assumed role session, update the stack to use the assumed role session as the principal in the bucket policy, and run the tests.
