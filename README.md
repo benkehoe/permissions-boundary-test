@@ -18,7 +18,7 @@ The documentation is unclear on IAM users. In adjacent paragraphs [here](https:/
 
 > Within an account, an implicit deny in a permissions boundary *does* limit the permissions granted to the ARN of the underlying [...] IAM user by the resource-based policy.
 
-It's possible the latter statement about an "IAM user" is actually about a *federated* user in an IAM role (using a "Federation" principal? Or is this about session through [GetFederationToken](https://docs.aws.amazon.com/STS/latest/APIReference/API_GetFederationToken.html)?
+It's possible the latter statement about an "IAM user" is actually about a *federated* user in an IAM role (using a "Federation" principal? Or is this about session for an IAM user through [GetFederationToken](https://docs.aws.amazon.com/STS/latest/APIReference/API_GetFederationToken.html)? What's the behavior with [GetSessionToken](https://docs.aws.amazon.com/STS/latest/APIReference/API_GetSessionToken.html) for an IAM user?
 
 ## Verification
 
