@@ -46,6 +46,28 @@ Allow | Allow | Allow | Allow
 Allow | - | - | Deny
 \- | Allow | - | Deny
 
+### Account as resource policy principal, with role in `aws:PrincipalArn` condition
+Permissions Boundary | Role Policy | Resource Policy | Result
+--- | --- | --- | ---
+\- | - | Allow | **Deny**
+\- | Allow | Allow | **Deny**
+Allow | Allow | - | Allow
+Allow | - | Allow | **Deny**
+Allow | Allow | Allow | Allow
+Allow | - | - | Deny
+\- | Allow | - | Deny
+
+### "*" as resource policy principal, with role in `aws:PrincipalArn` condition
+Permissions Boundary | Role Policy | Resource Policy | Result
+--- | --- | --- | ---
+\- | - | Allow | **Allow**
+\- | Allow | Allow | **Allow**
+Allow | Allow | - | Allow
+Allow | - | Allow | **Allow**
+Allow | Allow | Allow | Allow
+Allow | - | - | Deny
+\- | Allow | - | Deny
+
 The code in this repo verifies this.
 
 Run `pipenv install` and then `test.py`.

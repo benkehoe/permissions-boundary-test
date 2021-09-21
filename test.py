@@ -40,41 +40,37 @@ def get_stack_info(response):
 
 def run_test(bucket, keys, body):
     results = []
-    for key in keys:
-        try:
-            bucket.put_object(
-                Key=key,
-                Body=body,
-            )
-            results.append((key, True))
-        except aws_error_utils.errors.AccessDenied:
-            results.append((key, False))
-        except aws_error_utils.ClientError as e:
-            results.append((key, e))
-
-    for base_key in keys:
-        key = "C-" + base_key
-        try:
-            bucket.put_object(
-                Key=key,
-                Body=body,
-            )
-            results.append((key, True))
-        except aws_error_utils.errors.AccessDenied:
-            results.append((key, False))
-        except aws_error_utils.ClientError as e:
-            results.append((key, e))
+    for prefix in ["R", "S", "C1", "C2"]:
+        prefix_results = []
+        for base_key in keys:
+            key = prefix + "-" + base_key
+            try:
+                bucket.put_object(
+                    Key=key,
+                    Body=body,
+                )
+                prefix_results.append((key, True))
+            except aws_error_utils.errors.AccessDenied:
+                prefix_results.append((key, False))
+            except aws_error_utils.ClientError as e:
+                prefix_results.append((key, e))
+        results.append(prefix_results)
 
     return results
 
 def print_results(results):
-    max_length = max(len(key) for key, _ in results)
-    for key, result in results:
-        if isinstance(result, bool):
-            result_str = "Allow" if result else "Deny"
-        else:
-            result_str = str(result)
-        print(f"{key.ljust(max_length)} {result_str}")
+    max_length = max(len(key) for prefix_results in results for key, _ in prefix_results)
+    first = True
+    for prefix_results in results:
+        if not first:
+            print("---")
+        first = False
+        for key, result in prefix_results:
+            if isinstance(result, bool):
+                result_str = "Allow" if result else "Deny"
+            else:
+                result_str = str(result)
+            print(f"{key.ljust(max_length)} {result_str}")
 
 def delete_objects(session, bucket_name):
     bucket = session.resource("s3").Bucket(bucket_name)
@@ -138,12 +134,6 @@ test_session_arn = response["Arn"]
 
 bucket = test_session.resource("s3").Bucket(outputs["BucketName"])
 
-print("\n\nTesting role as resource policy principal")
-results = run_test(bucket, KEYS, timestamp_bytes)
-
-print_results(results)
-print("\n")
-
 print(f"Updating stack with assumed role session {test_session_arn}")
 cloudformation.update_stack(
     StackName=args.stack_name,
@@ -158,7 +148,7 @@ print("Update in progress")
 cloudformation.get_waiter("stack_update_complete").wait(StackName=args.stack_name, WaiterConfig={"Delay": 5})
 print("Update complete")
 
-print("\n\nTesting assumed role session as resource policy principal")
+print("\n\nTesting")
 results = run_test(bucket, KEYS, timestamp_bytes)
 
 print_results(results)

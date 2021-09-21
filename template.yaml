@@ -24,6 +24,25 @@ Outputs:
     Value: !Ref Bucket
 
 Resources:
+  PlaceholderRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Effect: Allow
+          Action: sts:AssumeRole
+          Principal:
+            "AWS": !Ref AWS::AccountId
+      Policies:
+        - PolicyName: DenyAll
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+            - Effect: Deny
+              Action: "*"
+              Resource: "*"
+
   Role:
     Type: AWS::IAM::Role
     Properties:
@@ -43,17 +62,31 @@ Resources:
             - Effect: Allow
               Action: s3:PutObject
               Resource:
-              - !Sub "arn:aws:s3:::${Bucket}/BA-PA-RA"
-              - !Sub "arn:aws:s3:::${Bucket}/BA-PA"
-              - !Sub "arn:aws:s3:::${Bucket}/PA-RA"
-              - !Sub "arn:aws:s3:::${Bucket}/PA"
+              - !Sub "arn:aws:s3:::${Bucket}/R-BA-PA-RA"
+              - !Sub "arn:aws:s3:::${Bucket}/R-BA-PA"
+              - !Sub "arn:aws:s3:::${Bucket}/R-PA-RA"
+              - !Sub "arn:aws:s3:::${Bucket}/R-PA"
             - Effect: Allow
               Action: s3:PutObject
               Resource:
-              - !Sub "arn:aws:s3:::${Bucket}/C-BA-PA-RA"
-              - !Sub "arn:aws:s3:::${Bucket}/C-BA-PA"
-              - !Sub "arn:aws:s3:::${Bucket}/C-PA-RA"
-              - !Sub "arn:aws:s3:::${Bucket}/C-PA"
+              - !Sub "arn:aws:s3:::${Bucket}/S-BA-PA-RA"
+              - !Sub "arn:aws:s3:::${Bucket}/S-BA-PA"
+              - !Sub "arn:aws:s3:::${Bucket}/S-PA-RA"
+              - !Sub "arn:aws:s3:::${Bucket}/S-PA"
+            - Effect: Allow
+              Action: s3:PutObject
+              Resource:
+              - !Sub "arn:aws:s3:::${Bucket}/C1-BA-PA-RA"
+              - !Sub "arn:aws:s3:::${Bucket}/C1-BA-PA"
+              - !Sub "arn:aws:s3:::${Bucket}/C1-PA-RA"
+              - !Sub "arn:aws:s3:::${Bucket}/C1-PA"
+            - Effect: Allow
+              Action: s3:PutObject
+              Resource:
+              - !Sub "arn:aws:s3:::${Bucket}/C2-BA-PA-RA"
+              - !Sub "arn:aws:s3:::${Bucket}/C2-BA-PA"
+              - !Sub "arn:aws:s3:::${Bucket}/C2-PA-RA"
+              - !Sub "arn:aws:s3:::${Bucket}/C2-PA"
 
   Policy:
     Type: AWS::IAM::ManagedPolicy
@@ -64,17 +97,31 @@ Resources:
         - Effect: Allow
           Action: s3:PutObject
           Resource:
-          - !Sub "arn:aws:s3:::${Bucket}/BA-PA-RA"
-          - !Sub "arn:aws:s3:::${Bucket}/BA-PA"
-          - !Sub "arn:aws:s3:::${Bucket}/BA-RA"
-          - !Sub "arn:aws:s3:::${Bucket}/BA"
+          - !Sub "arn:aws:s3:::${Bucket}/R-BA-PA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/R-BA-PA"
+          - !Sub "arn:aws:s3:::${Bucket}/R-BA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/R-BA"
         - Effect: Allow
           Action: s3:PutObject
           Resource:
-          - !Sub "arn:aws:s3:::${Bucket}/C-BA-PA-RA"
-          - !Sub "arn:aws:s3:::${Bucket}/C-BA-PA"
-          - !Sub "arn:aws:s3:::${Bucket}/C-BA-RA"
-          - !Sub "arn:aws:s3:::${Bucket}/C-BA"
+          - !Sub "arn:aws:s3:::${Bucket}/S-BA-PA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/S-BA-PA"
+          - !Sub "arn:aws:s3:::${Bucket}/S-BA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/S-BA"
+        - Effect: Allow
+          Action: s3:PutObject
+          Resource:
+          - !Sub "arn:aws:s3:::${Bucket}/C1-BA-PA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/C1-BA-PA"
+          - !Sub "arn:aws:s3:::${Bucket}/C1-BA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/C1-BA"
+        - Effect: Allow
+          Action: s3:PutObject
+          Resource:
+          - !Sub "arn:aws:s3:::${Bucket}/C2-BA-PA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/C2-BA-PA"
+          - !Sub "arn:aws:s3:::${Bucket}/C2-BA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/C2-BA"
 
   Bucket:
     Type: AWS::S3::Bucket
@@ -90,35 +137,53 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-        - Sid: BaseTest
+        - Sid: Role
+          Effect: Allow
+          Action: s3:PutObject
+          Principal:
+            AWS: !GetAtt Role.Arn
+          Resource:
+          - !Sub "arn:aws:s3:::${Bucket}/R-BA-PA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/R-BA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/R-PA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/R-RA"
+        - Sid: Session
           Effect: Allow
           Action: s3:PutObject
           Principal:
             AWS:
             - !If
               - SessionNameNotSet
-              - !GetAtt Role.Arn
+              - !Sub "arn:aws:iam::${AWS::AccountId}:assumed-role/${PlaceholderRole}/InvalidRoleSession"
               - !Ref AssumedRoleSessionArn
           Resource:
-          - !Sub "arn:aws:s3:::${Bucket}/BA-PA-RA"
-          - !Sub "arn:aws:s3:::${Bucket}/BA-RA"
-          - !Sub "arn:aws:s3:::${Bucket}/PA-RA"
-          - !Sub "arn:aws:s3:::${Bucket}/RA"
-        - Sid: ConditionTest
+          - !Sub "arn:aws:s3:::${Bucket}/S-BA-PA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/S-BA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/S-PA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/S-RA"
+        - Sid: ConditionTest1
           Effect: Allow
           Action: s3:PutObject
           Principal:
             AWS: !Sub "${AWS::AccountId}"
           Resource:
-          - !Sub "arn:aws:s3:::${Bucket}/C-BA-PA-RA"
-          - !Sub "arn:aws:s3:::${Bucket}/C-BA-RA"
-          - !Sub "arn:aws:s3:::${Bucket}/C-PA-RA"
-          - !Sub "arn:aws:s3:::${Bucket}/C-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/C1-BA-PA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/C1-BA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/C1-PA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/C1-RA"
           Condition:
             StringEquals:
-              "aws:PrincipalArn":
-                - !If
-                  - SessionNameNotSet
-                  - !GetAtt Role.Arn
-                  - !Ref AssumedRoleSessionArn
+              "aws:PrincipalArn": !GetAtt Role.Arn
+        - Sid: ConditionTest2
+          Effect: Allow
+          Action: s3:PutObject
+          Principal: "*"
+          Resource:
+          - !Sub "arn:aws:s3:::${Bucket}/C2-BA-PA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/C2-BA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/C2-PA-RA"
+          - !Sub "arn:aws:s3:::${Bucket}/C2-RA"
+          Condition:
+            StringEquals:
+              "aws:PrincipalArn": !GetAtt Role.Arn
 
