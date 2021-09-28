@@ -1,3 +1,5 @@
+**Read the [accompanying article](https://ben11kehoe.medium.com/aws-iam-permission-boundaries-has-a-caveat-that-may-surprise-you-2e8cbad2883a).**
+
 The flowchart from the AWS IAM [policy evaluation documentation page](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html), as of 2021-09-12, and dating back to at least [2018-12-27](https://web.archive.org/web/20181227013421/https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html), is the following:
 
 ![Flowchart](policy-evaluation-flowchart-20210912.png)
@@ -12,13 +14,8 @@ Resource policies cannot unilaterally grant access to an IAM *role* but *can* un
 
 This is true for assumed role sessions created with `AssumeRole` (and presumably `AssumeRoleWithSAML` and `AssumeRoleWithWebIdentity`), where the principal in the resource policy is the assumed role session ARN, which is retrievable through the `GetCallerIdentity` API, which does not require permissions.
 
-The documentation is unclear on IAM users. In adjacent paragraphs [here](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html#access_policies_boundaries-eval-logic), the documentation states:
-
-> Within an account, an implicit deny in a permissions boundary *does not* limit the permissions granted to an IAM user by a resource-based policy.
-
-> Within an account, an implicit deny in a permissions boundary *does* limit the permissions granted to the ARN of the underlying [...] IAM user by the resource-based policy.
-
-It's possible the latter statement about an "IAM user" is actually about a *federated* user in an IAM role (using a "Federation" principal? Or is this about session for an IAM user through [GetFederationToken](https://docs.aws.amazon.com/STS/latest/APIReference/API_GetFederationToken.html)? What's the behavior with [GetSessionToken](https://docs.aws.amazon.com/STS/latest/APIReference/API_GetSessionToken.html) for an IAM user?
+This also applies "federated users" but this does *not* mean an assumed role session using `AssumeRoleWithSAML` with a federated identity provider; it refers to sessions created with [`GetFederationToken`](https://docs.aws.amazon.com/STS/latest/APIReference/API_GetFederationToken.html) using IAM User credentials.
+Note that the usage of "federated user" is inconsistent in the IAM documentation, used to refer to both kinds of federation.
 
 ## Verification
 
@@ -70,6 +67,7 @@ Allow | - | - | Deny
 
 The code in this repo verifies this.
 
+Install [pipenv](https://pipenv.pypa.io/en/latest/) if you haven't got it.
 Run `pipenv install` and then `test.py`.
 Use `--profile` on `test.py` to make it use a config profile.
 
